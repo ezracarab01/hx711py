@@ -24,6 +24,9 @@ else:
     print("[INFO] Read mode is 'interrupt based'.")
     
 
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(17, GPIO.OUT)
+
 hx = HX711(5, 6)
 
 def printRawBytes(rawBytes):
@@ -36,7 +39,10 @@ def printLongWithOffset(rawBytes):
     print(f"[LONG WITH OFFSET] {hx.rawBytesToLongWithOffset(rawBytes)}")
 
 def printWeight(rawBytes):
-    print(f"[WEIGHT] {hx.rawBytesToWeight(rawBytes)} gr")
+    print(f"[WEIGHT] {int(hx.rawBytesToWeight(rawBytes) / 1000)} ")
+
+def getSensorValue():
+    return int(hx.rawBytesToWeight(hx.getRawBytes())/1000)
 
 def printAll(rawBytes):
     longValue = hx.rawBytesToLong(rawBytes)
@@ -98,10 +104,23 @@ if READ_MODE == READ_MODE_INTERRUPT_BASED:
     print("[INFO] Finished enabling the callback.")
 
 
+gpio_value = GPIO.LOW
+    
 while True:
     try:
         if READ_MODE == READ_MODE_POLLING_BASED:
-            getRawBytesAndPrintAll()
+            sensorValue = getSensorValue()
+            if sensorValue < 25 and sensorValue > -10:
+                print(f"Sensor value: {sensorValue}")
+                if sensorValue >= 5 and gpio_value == GPIO.LOW:
+                    print("UP")
+                    gpio_value = GPIO.HIGH
+                    GPIO.output(17, gpio_value)
+                elif sensorValue < 5 and gpio_value == GPIO.HIGH:
+                    print("DOWN")
+                    gpio_value = GPIO.LOW
+                    GPIO.output(17, gpio_value)
+            
             
     except (KeyboardInterrupt, SystemExit):
         GPIO.cleanup()
